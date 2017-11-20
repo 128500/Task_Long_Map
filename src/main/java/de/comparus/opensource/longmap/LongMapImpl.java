@@ -1,7 +1,18 @@
 package de.comparus.opensource.longmap;
 
-import java.util.HashSet;
-import java.util.Set;
+
+import java.lang.reflect.Array;
+import java.util.HashMap;
+
+/**
+ * TODO checking the array for emptiness
+ * TODO "not equal to null" checking in methods
+ * This is a simple imitation of widely known 'Map' interface.
+ * As a real map it allows to store elements as a key-value pair.
+ * As a key it takes 'long' (only positive ones) and as a value
+ * it takes any object that also might be 'null'.
+ * @param <V> - type of the element that must be put into map
+ */
 
 public class LongMapImpl<V> implements LongMap<V> {
 
@@ -14,11 +25,6 @@ public class LongMapImpl<V> implements LongMap<V> {
         /*The field containing the value of generic class 'V'*/
         private V value;
 
-        /**The field of the class containing the hashCode value.
-         * The hashCode value calculates by the value of key field
-         * as the latter is always unique.
-         */
-        private int hash;
 
         /*Simple constructor*/
         PairKV(long key, V value){
@@ -30,33 +36,29 @@ public class LongMapImpl<V> implements LongMap<V> {
          * Note that there is no setter for the key field
          * because it is final and MUST NOT (and cannot) be changed.
          */
-        public long getKey() {
+        long getKey() {
             return key;
         }
 
-        public V getValue() {
+        V getValue() {
             return value;
         }
 
-        public int getHash() {
+        /**int getHash() {
             return hash;
-        }
+        }*/
 
-        public void setValue(V value) {
+        void setValue(V value) {
             this.value = value;
         }
 
-        public void setHash(int hash) {
+        /**public void setHash(int hash) {
             this.hash = hash;
-        }
+        }*/
     }
 
-    /*An indicator that shows the absence of the element (after
-    * 'remove' method was called).*/
-    //private final static long EMPTY = -1L;
-
     /*An array of PairKV<> values*/
-    private PairKV<V> [] pairs;
+    private PairKV[] pairs;
 
     /*An indicator of how many objects(PairKV<>) are currently in the 'pairs' array*/
     private int existingPairs;
@@ -67,7 +69,8 @@ public class LongMapImpl<V> implements LongMap<V> {
 
     /*Default constructor*/
     LongMapImpl(){
-        this.pairs = new PairKV[10];
+        this.pairs =  new PairKV[10];
+        this.size = 10;
     }
 
     /*Constructor defining the size of the creating array*/
@@ -75,6 +78,7 @@ public class LongMapImpl<V> implements LongMap<V> {
         if (size < 0) throw new IllegalArgumentException("Size of a map must be '0' or more!");
         if (size > (Integer.MAX_VALUE - 1)) throw new IllegalArgumentException("Size of a map mustn't be more than" + (Integer.MAX_VALUE - 1));
         this.pairs = new PairKV[size];
+        this.size = size;
     }
 
     /**
@@ -88,41 +92,64 @@ public class LongMapImpl<V> implements LongMap<V> {
      */
     public V put(long key, V value) {
         if (key < 0) throw new IllegalArgumentException("Value of the key cannot be negative!");
-        PairKV<V> newPair = new PairKV<>(key, value);
         V v = value;
         if (existingPairs == size) resize();
 
         if(containsKey(key)){
             for(PairKV<V> pair : pairs){
+                if(pair == null) continue;
                 if(pair.getKey() == key){
                     v = pair.getValue();
                     pair.setValue(value);
                 }
             }
         }
-        else for (PairKV<V> pair : pairs){
-           if(pair == null) {
-               pair = newPair;
-               break;
-           }
+        else {
+            PairKV<V> newPair = new PairKV<>(key, value);
+            for (int i = 0; i < size; i++){
+                if(pairs[i] == null) {
+                    pairs[i] = newPair;
+                    break;
+                }
+            }
         }
+        existingPairs++;
         return v;
     }
 
     public V get(long key) {
-        return null;
+        V v = null;
+        for(PairKV<V> pair : pairs){
+            if(pair == null) continue;
+            if(pair.getKey() == key){
+                v = pair.getValue();
+                break;
+            }
+        }
+        return v;
     }
 
     public V remove(long key) {
-        return null;
+        V v = null;
+        for(int i = 0; i < size; i++){
+            if(pairs[i] == null) continue;
+            if(pairs[i].getKey() == key){
+                v = (V) pairs[i].getValue();
+                pairs[i] = null;
+                existingPairs--;
+                break;
+            }
+        }
+        return v;
     }
 
     public boolean isEmpty() {
-        return false;
+        return existingPairs == 0;
     }
 
     public boolean containsKey(long key) {
         for (PairKV<V> pair : pairs){
+            if(pair == null) continue;
             if(pair.getKey() == key) return true;
         }
         return false;
@@ -130,6 +157,7 @@ public class LongMapImpl<V> implements LongMap<V> {
 
     public boolean containsValue(V value) {
         for (PairKV<V> pair : pairs){
+            if(pair == null) continue;
             if(pair.getValue() == value ||
                     (value != null && pair.getValue().equals(value))) return true;
         }
@@ -137,24 +165,48 @@ public class LongMapImpl<V> implements LongMap<V> {
     }
 
     public long[] keys() {
-        return null;
+        if(existingPairs == 0) return new long[0];
+        long[] keys = new long[existingPairs];
+        int keysCounter = 0;
+        for(int i = 0; i < existingPairs; i++){
+            if(pairs[i] != null && keysCounter < existingPairs){
+                keys[keysCounter] = pairs[i].getKey();
+                keysCounter++;
+            }
+        }
+        return keys;
     }
 
+    @SuppressWarnings("unchecked")
     public V[] values() {
-        return null;
+        if(existingPairs == 0) return(V[]) new Object[0];
+        Class<?> clazz = getClassType();
+        V[] values = (V[]) Array.newInstance(clazz, existingPairs);
+        int valCounter = 0;
+        for(int i = 0; i < existingPairs; i++){
+            if(pairs[i] != null && valCounter < existingPairs){
+                values[valCounter] = (V) pairs[i].getValue();
+                valCounter++;
+            }
+        }
+        return values;
     }
 
     public long size() {
-        return 0;
+        return (long)existingPairs;
     }
 
     public void clear() {
-
+        if(existingPairs == 0) return;
+        for (int i = 0; i < size; i++){
+            if(pairs[i] != null) pairs[i] = null;
+        }
+        existingPairs = 0;
     }
 
     private void resize(){
        int  newSize = Math.round(size * 1.1f);
-       PairKV<V>[] newPairs = new PairKV[newSize];
+       PairKV[] newPairs = new PairKV[newSize];
        for(int i = 0; i < size; i++){
            newPairs[i] = pairs[i];
            pairs[i] = null;
@@ -162,5 +214,16 @@ public class LongMapImpl<V> implements LongMap<V> {
 
        pairs = newPairs;
        size = pairs.length;
+    }
+
+    private Class<?> getClassType(){
+        Class<?> clazz = null;
+        for(int i = 0; i < size; i++){
+            if(pairs[i] != null) {
+                clazz = pairs[i].getValue().getClass();
+                break;
+            }
+        }
+        return  clazz;
     }
 }
