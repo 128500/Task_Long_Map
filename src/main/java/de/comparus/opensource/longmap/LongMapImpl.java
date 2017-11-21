@@ -2,12 +2,9 @@ package de.comparus.opensource.longmap;
 
 
 import java.lang.reflect.Array;
-import java.util.HashMap;
 
 /**
- * TODO checking the array for emptiness
- * TODO "not equal to null" checking in methods
- * This is a simple imitation of widely known 'Map' interface.
+ * This is a simple imitation of the 'Map' interface.
  * As a real map it allows to store elements as a key-value pair.
  * As a key it takes 'long' (only positive ones) and as a value
  * it takes any object that also might be 'null'.
@@ -51,10 +48,6 @@ public class LongMapImpl<V> implements LongMap<V> {
         void setValue(V value) {
             this.value = value;
         }
-
-        /**public void setHash(int hash) {
-            this.hash = hash;
-        }*/
     }
 
     /*An array of PairKV<> values*/
@@ -63,14 +56,10 @@ public class LongMapImpl<V> implements LongMap<V> {
     /*An indicator of how many objects(PairKV<>) are currently in the 'pairs' array*/
     private int existingPairs;
 
-    /*An indicator of the current length of the 'pairs' array*/
-    private int size;
-
 
     /*Default constructor*/
     LongMapImpl(){
         this.pairs =  new PairKV[10];
-        this.size = 10;
     }
 
     /*Constructor defining the size of the creating array*/
@@ -78,50 +67,50 @@ public class LongMapImpl<V> implements LongMap<V> {
         if (size < 0) throw new IllegalArgumentException("Size of a map must be '0' or more!");
         if (size > (Integer.MAX_VALUE - 1)) throw new IllegalArgumentException("Size of a map mustn't be more than" + (Integer.MAX_VALUE - 1));
         this.pairs = new PairKV[size];
-        this.size = size;
     }
 
-    /**
-     * Puts a given value with a given key
-     * into the 'map'.
-     * @param key - key's value (cannot be 'null')
-     * @param value - a given value of V class
-     * @return old value of V class if there was assigned value
-     * or null if there was no value assigned with the given key
-     * or if the value assigned with the given key was null.
-     */
+    @SuppressWarnings("unchecked")
     public V put(long key, V value) {
         if (key < 0) throw new IllegalArgumentException("Value of the key cannot be negative!");
-        V v = value;
-        if (existingPairs == size) resize();
-
-        if(containsKey(key)){
-            for(PairKV<V> pair : pairs){
-                if(pair == null) continue;
-                if(pair.getKey() == key){
-                    v = pair.getValue();
-                    pair.setValue(value);
-                }
-            }
+        V v = null;
+        if (existingPairs == pairs.length) resize();
+        if (existingPairs == 0) {
+            pairs[0] = new PairKV<>(key, value);
+            existingPairs++;
+            return null;
         }
-        else {
-            PairKV<V> newPair = new PairKV<>(key, value);
-            for (int i = 0; i < size; i++){
-                if(pairs[i] == null) {
-                    pairs[i] = newPair;
+        int markNull = -1;
+        int count = 0;
+        for( int i = 0; i < pairs.length; i++){
+            if(count == existingPairs && markNull != -1){
+                pairs[markNull] = new PairKV<>(key, value);
+                existingPairs++;
+                return null;
+            }
+            if(count == existingPairs){
+                pairs[count] = new PairKV<>(key, value);
+                existingPairs++;
+                return null;
+            }
+            if(pairs[i] == null) markNull = i;
+            else {
+                if(pairs[i].getKey() == key){
+                    v = (V)pairs[i].getValue();
+                    pairs[i].setValue(value);
+                    existingPairs++;
                     break;
                 }
+                else count++;
             }
         }
-        existingPairs++;
         return v;
     }
 
+    @SuppressWarnings("unchecked")
     public V get(long key) {
         V v = null;
         for(PairKV<V> pair : pairs){
-            if(pair == null) continue;
-            if(pair.getKey() == key){
+            if(pair != null && pair.getKey() == key){
                 v = pair.getValue();
                 break;
             }
@@ -129,11 +118,11 @@ public class LongMapImpl<V> implements LongMap<V> {
         return v;
     }
 
+    @SuppressWarnings("unchecked")
     public V remove(long key) {
         V v = null;
-        for(int i = 0; i < size; i++){
-            if(pairs[i] == null) continue;
-            if(pairs[i].getKey() == key){
+        for(int i = 0; i < pairs.length; i++){
+            if(pairs[i] != null && pairs[i].getKey() == key){
                 v = (V) pairs[i].getValue();
                 pairs[i] = null;
                 existingPairs--;
@@ -147,6 +136,7 @@ public class LongMapImpl<V> implements LongMap<V> {
         return existingPairs == 0;
     }
 
+    @SuppressWarnings("unchecked")
     public boolean containsKey(long key) {
         for (PairKV<V> pair : pairs){
             if(pair == null) continue;
@@ -155,6 +145,7 @@ public class LongMapImpl<V> implements LongMap<V> {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     public boolean containsValue(V value) {
         for (PairKV<V> pair : pairs){
             if(pair == null) continue;
@@ -198,29 +189,33 @@ public class LongMapImpl<V> implements LongMap<V> {
 
     public void clear() {
         if(existingPairs == 0) return;
-        for (int i = 0; i < size; i++){
+        for (int i = 0; i < pairs.length; i++){
             if(pairs[i] != null) pairs[i] = null;
         }
         existingPairs = 0;
     }
 
+    /**
+     * Resizes the current array of PairKV values if
+     * it is completely filled. The length of the
+     * current array increases by 10% (multiplying
+     * by 1.1).
+     */
     private void resize(){
-       int  newSize = Math.round(size * 1.1f);
+       int  newSize = Math.round(pairs.length * 1.1f);
        PairKV[] newPairs = new PairKV[newSize];
-       for(int i = 0; i < size; i++){
+       for(int i = 0; i < pairs.length; i++){
            newPairs[i] = pairs[i];
            pairs[i] = null;
        }
-
        pairs = newPairs;
-       size = pairs.length;
     }
 
     private Class<?> getClassType(){
         Class<?> clazz = null;
-        for(int i = 0; i < size; i++){
-            if(pairs[i] != null) {
-                clazz = pairs[i].getValue().getClass();
+        for(PairKV pair : pairs){
+            if(pair != null) {
+                clazz = pair.getValue().getClass();
                 break;
             }
         }

@@ -1,14 +1,16 @@
 package de.comparus.opensource.longmap;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.Assert.*;
 
-public class LongMapImplTest extends Test {
+public class LongMapImplTest {
 
     private LongMapImpl<String> map;
 
@@ -19,17 +21,20 @@ public class LongMapImplTest extends Test {
 
     @org.junit.Test
     public void put() throws Exception {
-        map.put(1L, "Value 1");
+        map.put(1L, "1");
         assertTrue(map.containsKey(1L));
-        assertTrue(map.containsValue("Value 1"));
+        assertTrue(map.containsValue("1"));
+    }
+
+    @org.junit.Test
+    public void putWrongParam() throws Exception {
+        //map.put(852L , 852L); - compile exception (the second param must be of type String)
     }
 
     @org.junit.Test
     public void putValueToExistingKey() throws Exception {
         map.put(1001L, "1001");
-        assertTrue(map.containsKey(1001L));
-        assertTrue(map.containsValue("1001"));
-
+        assertEquals("1001", map.get(1001L));
         map.put(1001L, "20002");
         assertEquals("20002", map.get(1001L));
     }
@@ -121,6 +126,27 @@ public class LongMapImplTest extends Test {
     }
 
     @org.junit.Test
+    public void containsComplexValue() throws Exception {
+        LongMap<List<Long>> arrayListLongMap = new LongMapImpl<>();
+        List<Long> list = new ArrayList<>();
+        list.add(123L);
+        list.add(125L);
+        arrayListLongMap.put(147L, list);
+
+        assertTrue(arrayListLongMap.containsValue(list));
+
+        List<Long> list2 = new ArrayList<>();
+        list2.add(123L);
+        list2.add(125L);
+
+        assertTrue(arrayListLongMap.containsValue(list2));
+
+        List<Long> list3 = new ArrayList<>();
+
+        assertFalse(arrayListLongMap.containsValue(list3));
+    }
+
+    @org.junit.Test
     public void keys() throws Exception {
         map.put(100L, "100");
         map.put(200L, "200");
@@ -154,7 +180,7 @@ public class LongMapImplTest extends Test {
     @Ignore
     @org.junit.Test
     /*
-     * Problem's here! Cannot get an empty list of generic type
+     * Problem's here! Cannot get an empty array of generic type
      * (only of type Object) without explicit declaring the
      * generic type in LongMapImpl constructor or invoking
      * (at least once) of the method 'put'
