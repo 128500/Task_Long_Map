@@ -1,4 +1,5 @@
-A short explanation about doing this task.
+# A short explanation about doing this task.
+
 My implementation of LongMap interface isn't the good one (and simple PerfomanceMeasuringMainClass is an evidence of it) and based on a simple unsorted array.
 But if it was based on hash and buckets and LinkedList (like it is in HashMap), one might say that it was just 'copy-paste'.
 I tried to make something my, not simply "I copy it here and paste it here". 
